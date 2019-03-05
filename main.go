@@ -14,6 +14,15 @@ type Ship struct{
 	sunk bool
 }
 
+func (s *Ship) checkSunk() bool{
+	for p := range(s.points){
+		if s.points[p].x != -1 || s.points[p].y!=-1{
+			return false
+		}
+	}
+	return true
+}
+
 func (s *Ship) init(size int){
 	s.size = size
 	s.sunk = false
@@ -37,12 +46,124 @@ var enemyShips[] Ship
 var board [10][10]int
 var enemyBoard [10][10] int
 var waterColor = color.New(color.FgBlue)
-var shipColor = color.New(color.FgHiBlack)
+var shipColor = color.New(color.FgRed)
+var boardColor = color.New(color.FgHiBlack)
 var errorColor = color.New(color.FgRed)
+var gameOver = false
 
 func main(){
 
 	initBoard()
+	for (!gameOver){
+		//TODO: add play again and stats
+		playPlayerTurn()
+		playEnemyTurn()
+	}
+}
+
+func playEnemyTurn(){
+	if gameOver  {return}
+	fmt.Println("Enemy turn")
+	hit := true
+	var rX,rY int
+	for (hit){
+		hit = false
+		rX, rY = getRandomPoint()
+		if board[rX][rY] == -1 || board[rX][rY] == -2{
+			hit = true
+		}
+	}
+	checkPointHit(Point{x:rX, y:rY}, playerShips, &board)
+	printPlayerBoard()
+
+}
+
+func printPlayerBoard(){
+	fmt.Print("YOUR BOARD\n ")
+	for i := range boardLetters{
+		fmt.Printf(" %d",i)
+	}
+	fmt.Println()
+	for i:=range board{
+		fmt.Print(boardLetters[i])
+		for j:=range board{
+			 if board[i][j] == -1{
+				shipColor.Print(" X")
+			} else if board[i][j] == -2{
+				waterColor.Print(" W")
+			} else {
+				boardColor.Print(" -")
+			}
+		}
+		fmt.Println()
+	}
+}
+
+func playPlayerTurn(){
+	buf := bufio.NewReader(os.Stdin)
+	fmt.Println("Enter point to shot.")
+	pos, err := buf.ReadString('\n')
+	iP := getPointFromString(getMessageFromString(pos))
+	point := Point{x:iP[0], y:iP[1]}
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		if !checkPointHit(point, enemyShips,&enemyBoard){
+			playPlayerTurn()
+		} else {
+			printEnemyBoard()
+		}
+		 
+	}
+}
+
+func checkPointHit(point Point, ships []Ship, board *[10][10]int) bool{
+	if point.x <0 || point.x>=len(board) || point.y<0 || point.y>=len(board) {return false}
+	if board[point.x][point.y] == -1 || board[point.x][point.y] == -2 {
+		fmt.Println("You already shot there!")
+		return false
+	}
+	for  s:= range(ships){
+		for p:= range(ships[s].points){
+			if ships[s].points[p].x == point.x && ships[s].points[p].y == point.y{
+				board[point.x][point.y] = -1
+				ships[s].points[p].x = -1;
+				ships[s].points[p].y = -1;
+				fmt.Printf("You hit a ship!\n")
+				if ships[s].checkSunk(){
+					ships[s].sunk = true
+					fmt.Printf("You sunk a ship of size %d!\n", ships[s].size)
+					checkWin()
+				}
+				return true
+			}
+		}
+	}
+
+	board[point.x][point.y] = -2
+	fmt.Println("Nothing there!")
+	return true
+}
+
+func checkWin(){
+	playerWon:= true
+	for  s:= range(enemyShips){
+		if !enemyShips[s].sunk{playerWon=false}
+	}
+	if playerWon{
+		fmt.Println("Player Won!!!")
+		gameOver = true
+	} else {
+		enemyWon := true
+		for s:= range(playerShips){
+			if !playerShips[s].sunk{enemyWon=false}
+		}
+
+		if enemyWon{
+			fmt.Println("Enemy Won!!!")
+			gameOver = true
+		}
+	}
 }
 
 func initBoard(){
@@ -67,13 +188,19 @@ func placeEnemyShips(){
 	printShips(enemyShips)
 }
 
-func placeEnemyShip(size, shipIndex int) bool{
-	rand.Seed(time.Now().UnixNano())
-	orientation := rand.Intn(2)
+func getRandomPoint() (int,int){
+
 	rand.Seed(time.Now().UnixNano())
 	randX := rand.Intn(10)
 	rand.Seed(time.Now().UnixNano())
 	randY := rand.Intn(10)
+	return randX, randY
+}
+
+func placeEnemyShip(size, shipIndex int) bool{
+	rand.Seed(time.Now().UnixNano())
+	orientation := rand.Intn(2)
+	randX, randY := getRandomPoint()
 	if orientation == 1{
 		//Vertically
 		if canPlaceShipInBoard(randX,randY,orientation,size,enemyShips){
@@ -131,7 +258,7 @@ func placePlayerShips(){
 	buf := bufio.NewReader(os.Stdin)
 	playerShips = make([]Ship, 5)
 	i:=0
-	printPlayerBoard()
+	printPositioningPlayerBoard()
 	for i<len(shipsSize){
 		fmt.Printf("Insert ship of size %d \n Horizontal or Vertical? (H/V)", shipsSize[i])
 		orientation, err := buf.ReadString('\n')
@@ -148,7 +275,7 @@ func placePlayerShips(){
 				} else {
 					if placeShipOnBoard(getPointFromString(getMessageFromString(pos)), shipsSize[i], orientation, i){
 						i++
-						printPlayerBoard()
+						printPositioningPlayerBoard()
 					}
 				}
 			} else {
@@ -165,6 +292,7 @@ func printShips(ships []Ship){
 		fmt.Printf("Ship of size %d, sunk = %t\n",ships[i].size,ships[i].sunk)
 	}
 }
+
 func printEnemyBoard(){
 	fmt.Println("ENEMY BOARD\n ")
 	for i := range boardLetters{
@@ -174,16 +302,19 @@ func printEnemyBoard(){
 	for i:=range enemyBoard{
 		fmt.Print(boardLetters[i])
 		for j:=range enemyBoard{
-			if enemyBoard[i][j] == 0{
-				waterColor.Print(" O")
-			} else if enemyBoard[i][j] == 1{
-				shipColor.Print(" S")
+			 if enemyBoard[i][j] == -1{
+				shipColor.Print(" X")
+			} else if enemyBoard[i][j] == -2{
+				waterColor.Print(" W")
+			} else {
+				boardColor.Print(" -")
 			}
 		}
 		fmt.Println()
 	}
 }
-func printPlayerBoard(){
+
+func printPositioningPlayerBoard(){
 	fmt.Print("YOUR BOARD\n ")
 	for i := range boardLetters{
 		fmt.Printf(" %d",i)
