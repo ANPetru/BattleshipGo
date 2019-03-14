@@ -51,19 +51,22 @@ var waterColor = color.New(color.FgBlue)
 var shipColor = color.New(color.FgRed)
 var boardColor = color.New(color.FgHiBlack)
 var errorColor = color.New(color.FgRed)
-var gameOver = false
+var gameOver bool
 
 func main() {
+	startGame()
+}
 
+func startGame() {
 	initBoard()
 	for !gameOver {
-		//TODO: add play again and stats
+		//TODO: add play again
 		playPlayerTurn()
 		playEnemyTurn()
 		exit := false
 		for !exit {
 			buf := bufio.NewReader(os.Stdin)
-			fmt.Println("-----\nPlay Turn --> 1\nSee Stats --> 2\n------")
+			fmt.Println("-----\nPlay Turn --> 1\nSee Stats --> 2\nForfeit --> 3\n------")
 			pos, err := buf.ReadString('\n')
 			instr := getMessageFromString(pos)
 			if err != nil {
@@ -76,6 +79,10 @@ func main() {
 					printShips(playerShips)
 					fmt.Println("Enemy ships")
 					printShips(enemyShips)
+				} else if instr == "3" {
+					fmt.Println("You forfeited!")
+					gameOver = true
+					checkWin()
 				}
 			}
 		}
@@ -194,12 +201,34 @@ func checkWin() {
 			gameOver = true
 		}
 	}
+	if gameOver {
+		exit := false
+		for !exit {
+			buf := bufio.NewReader(os.Stdin)
+			fmt.Println("Play Again?('Y'-'N')")
+			pos, err := buf.ReadString('\n')
+			pA := getMessageFromString(pos)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				if pA == "Y" {
+					startGame()
+					exit = true
+				} else if pA == "N" {
+					os.Exit(0)
+				}
+			}
+		}
+
+	}
 }
 
 func initBoard() {
+	gameOver = false
 	for i := range board {
 		for j := range board {
 			board[i][j] = 0
+			enemyBoard[i][j] = 0
 		}
 	}
 	placePlayerShips()
@@ -455,3 +484,4 @@ func placeShipOnBoard(pos [2]int, size int, orientation string, shipIndex int) b
 	fmt.Println("Ship placed")
 	return true
 }
+
