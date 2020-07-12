@@ -39,6 +39,8 @@ Players alternate turns calling "shots" at the other player's ships, and the obj
 
 ![Demo winning](https://j.gifs.com/gZjkll.gif)
 
+<a name="play"/>
+
 ## How to play
 
 Download this project and extract it in your folder of choice.
@@ -50,6 +52,8 @@ Go to `Platforms/Linux` in the command line and run `./battleship`.
 ### Windows
 
 Go to `Platforms\Windows` in the file explorer and run `battleship`.
+
+<a name="ideas"/>
 
 ## Improvement ideas
 
