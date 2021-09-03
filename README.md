@@ -59,8 +59,8 @@ Go to `Platforms\Windows` in the file explorer and run `battleship`.
 
 ### Player vs player
 
-Currently, you can only play against the IA, it would be cool to be able to play against your friends.
+Currently, you can only play against the IA, it would be nice to be able to play against your friends.
 
 ### Add actual IA
 
-Currently, IA is makes it's turns randomly, it would be cool to add an IA to make it more competitive. An idea would be to check adjacent cells after hitting a ship. 
+Currently, IA makes it's turns randomly, it would be nice to add a more competitive IA. An idea would be to shot adjacent cells after hitting a ship. 
