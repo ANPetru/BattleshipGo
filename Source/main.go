@@ -41,17 +41,25 @@ type Point struct {
 	x, y int
 }
 
+const (
+	PLAY_TURN_ACTION = "1"
+	SEE_STATS_ACTION = "2"
+	FORFEIT_ACTION = "3"
+)
+
 var shipsSize = [5]int{2, 3, 3, 4, 5}
 var boardLetters = [10]string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
+
 var playerShips []Ship
 var enemyShips []Ship
 var board [10][10]int
 var enemyBoard [10][10]int
+var gameOver bool
+
 var waterColor = color.New(color.FgBlue)
 var shipColor = color.New(color.FgRed)
 var boardColor = color.New(color.FgHiBlack)
 var errorColor = color.New(color.FgRed)
-var gameOver bool
 
 func main() {
 	startGame()
@@ -60,31 +68,42 @@ func main() {
 func startGame() {
 	initBoard()
 	for !gameOver {
-		//TODO: add play again
 		playPlayerTurn()
 		playEnemyTurn()
-		exit := false
-		for !exit {
-			buf := bufio.NewReader(os.Stdin)
-			fmt.Println("-----\nPlay Turn --> 1\nSee Stats --> 2\nForfeit --> 3\n------")
-			pos, err := buf.ReadString('\n')
-			instr := getMessageFromString(pos)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				if instr == "1" {
-					exit = true
-				} else if instr == "2" {
-					fmt.Println("Your ships:")
-					printShips(playerShips)
-					fmt.Println("Enemy ships")
-					printShips(enemyShips)
-				} else if instr == "3" {
-					fmt.Println("You forfeited!")
-					gameOver = true
-					checkWin()
-				}
+		displayActionOptions()
+	}
+	validInput := false
+	for !validInput {
+		buf := bufio.NewReader(os.Stdin)
+		fmt.Println("Play Again?('Y'-'N')")
+		msg, err := buf.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			playAgain := getMessageFromString(msg)
+			if playAgain == "Y" {
+				startGame()
+				validInput = true
+			} else if playAgain == "N" {
+				os.Exit(0)
 			}
+		}
+	}
+}
+
+func playPlayerTurn() {
+	buf := bufio.NewReader(os.Stdin)
+	fmt.Println("Enter point to shot.")
+	pos, err := buf.ReadString('\n')
+	iP := getPointFromString(getMessageFromString(pos))
+	point := Point{x: iP[0], y: iP[1]}
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		if !checkPointHit(point, enemyShips, &enemyBoard) {
+			playPlayerTurn()
+		} else {
+			printEnemyBoard()
 		}
 
 	}
@@ -130,23 +149,6 @@ func printPlayerBoard() {
 	}
 }
 
-func playPlayerTurn() {
-	buf := bufio.NewReader(os.Stdin)
-	fmt.Println("Enter point to shot.")
-	pos, err := buf.ReadString('\n')
-	iP := getPointFromString(getMessageFromString(pos))
-	point := Point{x: iP[0], y: iP[1]}
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		if !checkPointHit(point, enemyShips, &enemyBoard) {
-			playPlayerTurn()
-		} else {
-			printEnemyBoard()
-		}
-
-	}
-}
 
 func checkPointHit(point Point, ships []Ship, board *[10][10]int) bool {
 	if point.x < 0 || point.x >= len(board) || point.y < 0 || point.y >= len(board) {
@@ -200,26 +202,6 @@ func checkWin() {
 			fmt.Println("Enemy Won!!!")
 			gameOver = true
 		}
-	}
-	if gameOver {
-		exit := false
-		for !exit {
-			buf := bufio.NewReader(os.Stdin)
-			fmt.Println("Play Again?('Y'-'N')")
-			pos, err := buf.ReadString('\n')
-			pA := getMessageFromString(pos)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				if pA == "Y" {
-					startGame()
-					exit = true
-				} else if pA == "N" {
-					os.Exit(0)
-				}
-			}
-		}
-
 	}
 }
 
@@ -353,7 +335,11 @@ func placePlayerShips() {
 
 func printShips(ships []Ship) {
 	for i := range ships {
-		fmt.Printf("Ship of size %d, sunk = %t\n", ships[i].size, ships[i].sunk)
+		sunkMsg := "not sunk"
+		if ships[i].sunk {
+			sunkMsg = "sunk"
+		}
+		fmt.Printf("Ship of size %d, %s\n", ships[i].size, sunkMsg)
 	}
 }
 
@@ -455,7 +441,6 @@ func getIntFromByte(b int) int {
 }
 
 func placeShipOnBoard(pos [2]int, size int, orientation string, shipIndex int) bool {
-
 	if orientation == "V" {
 		if pos[0] >= 0 && pos[0]+size-1 < len(board) && pos[1] >= 0 && pos[1] < len(board) &&
 			canPlaceShipInBoard(pos[0], pos[1], 1, size, playerShips) {
@@ -485,3 +470,31 @@ func placeShipOnBoard(pos [2]int, size int, orientation string, shipIndex int) b
 	return true
 }
 
+func displayActionOptions(){
+	validAction := false
+	for !validAction {
+		buf := bufio.NewReader(os.Stdin)
+		fmt.Println("-----\nPlay Turn --> 1\nSee Stats --> 2\nForfeit --> 3\n------")
+		action, err := buf.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			switch (getMessageFromString(action)) {
+				case PLAY_TURN_ACTION :
+					validAction = true
+					break;
+				case SEE_STATS_ACTION:
+					fmt.Println("Your ships:")
+					printShips(playerShips)
+					fmt.Println("Enemy ships")
+					printShips(enemyShips)
+					break;
+				case FORFEIT_ACTION:
+					fmt.Println("You forfeited!")
+					gameOver = true
+					checkWin()
+					break;
+			}
+		}
+	}
+}
